@@ -17,3 +17,6 @@ cd "$top"
 echo -e "\e[1m=== Reformatting nix code\e[0m" >&2
 ./nixpkgs-fmt.sh \
     ./{,nix/,tests/}*.nix
+
+echo -e "\e[1m=== Run nix unit tests\e[0m" >&2
+nix-test tests
