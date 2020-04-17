@@ -31,6 +31,8 @@ rec {
       then builtins.trace "unrecognized version requirement, no op found: ${requirement}" (version: false)
       else if op.match == "^"
       then internal.caretMatch versionPrefix.match
+      else if op.match == "~"
+      then internal.tildeMatch versionPrefix.match
       else if op.match == "="
       then version: versionPrefix.match == version
       else if op.match == ">="
@@ -67,6 +69,26 @@ rec {
         else if major != "0"
         then (builtins.compareVersions version nextMajor) < 0
         else (builtins.compareVersions version "0.${nextMinor}") < 0;
+
+    tildeMatch = prefix: version:
+      let
+        match = builtins.match VERSION_PREFIX prefix;
+        major = builtins.elemAt match 1;
+        majorInt = lib.toInt major;
+        nextMajor = builtins.toString (majorInt + 1);
+        dotMinor = builtins.elemAt match 2;
+        minor = builtins.substring 1 100 dotMinor;
+        minorInt = lib.toInt minor;
+        nextMinor = builtins.toString (minorInt + 1);
+        versionCmp = builtins.compareVersions prefix version;
+      in
+        if versionCmp == 1
+        then false
+        else if versionCmp == 0
+        then true
+        else if dotMinor != null
+        then (builtins.compareVersions version "${major}.${nextMinor}") < 0
+        else (builtins.compareVersions version nextMajor) < 0;
 
     firstMatch = regex: string:
       let

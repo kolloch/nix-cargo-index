@@ -71,6 +71,60 @@ in
     expected = testCase;
   };
 
+  test_tilde_match1 = rec {
+    testCase = { req = "~1.0.2"; version = "1.1.2"; match = false; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match1b = rec {
+    testCase = { req = "~1.0.2"; version = "1.0.1"; match = false; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match2 = rec {
+    testCase = { req = "~1.0.2"; version = "2.1.2"; match = false; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match3 = rec {
+    testCase = { req = "~1.0"; version = "1.0.2"; match = true; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match4 = rec {
+    testCase = { req = "~1"; version = "1.33.2"; match = true; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match5 = rec {
+    testCase = { req = "~1.0.2"; version = "1.0.2"; match = true; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match_minor = rec {
+    testCase = { req = "~0.1.2"; version = "0.1.3"; match = true; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match_minor2 = rec {
+    testCase = { req = "~0.1.2"; version = "0.1.1"; match = false; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
+  test_tilde_match_minor3 = rec {
+    testCase = { req = "~0.1.2"; version = "0.2.3"; match = false; };
+    expr = evalVersionTestCase testCase;
+    expected = testCase;
+  };
+
   test_matchAndRest_up = {
     expr = semver.internal.matchAndRest semver.VERSION_MATCH_OP "^1.2";
     expected = { match = "^"; rest = "1.2"; };
