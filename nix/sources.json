@@ -1,0 +1,62 @@
+{
+    "crate2nix": {
+        "branch": "master",
+        "description": "nix build file generator for rust crates",
+        "homepage": "",
+        "owner": "kolloch",
+        "repo": "crate2nix",
+        "rev": "0c56e77adb2661c3c0647ad22a80b63806521e6d",
+        "sha256": "19bpl5wy0ln67zl9fx1dsivz9j2k99v3fnlhvrpgs0x04i5z86d8",
+        "type": "tarball",
+        "url": "https://github.com/kolloch/crate2nix/archive/0c56e77adb2661c3c0647ad22a80b63806521e6d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "crates.io-index": {
+        "branch": "master",
+        "description": "Registry index for crates.io",
+        "homepage": "https://crates.io/",
+        "owner": "rust-lang",
+        "repo": "crates.io-index",
+        "rev": "088b0635a4645a66daa84d84f19e2e6aead1c1a5",
+        "sha256": "1l4yi18sdlnwkm0isfvfdq5hhmmwc884khacam9039hmx8h2jyxj",
+        "type": "tarball",
+        "url": "https://github.com/rust-lang/crates.io-index/archive/088b0635a4645a66daa84d84f19e2e6aead1c1a5.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "niv": {
+        "branch": "master",
+        "description": "Easy dependency management for Nix projects",
+        "homepage": "https://github.com/nmattia/niv",
+        "owner": "nmattia",
+        "repo": "niv",
+        "rev": "f73bf8d584148677b01859677a63191c31911eae",
+        "sha256": "0jlmrx633jvqrqlyhlzpvdrnim128gc81q5psz2lpp2af8p8q9qs",
+        "type": "tarball",
+        "url": "https://github.com/nmattia/niv/archive/f73bf8d584148677b01859677a63191c31911eae.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nix-test-runner": {
+        "branch": "master",
+        "description": "Test runner for nix expressions",
+        "homepage": "",
+        "owner": "stoeffel",
+        "repo": "nix-test-runner",
+        "rev": "f7e4a5cc0782ba36a3064d60037b3b9cea1831fe",
+        "sha256": "1m5vz8f42cp2jvawmmbhgqj348yvsrqjmm6p99yljvz5dk3wnkws",
+        "type": "tarball",
+        "url": "https://github.com/stoeffel/nix-test-runner/archive/f7e4a5cc0782ba36a3064d60037b3b9cea1831fe.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "nixpkgs-unstable",
+        "description": "A read-only mirror of NixOS/nixpkgs tracking the released channels. Send issues and PRs to",
+        "homepage": "https://github.com/NixOS/nixpkgs",
+        "owner": "NixOS",
+        "repo": "nixpkgs-channels",
+        "rev": "5f814bf9cc466be415d784a9cbf0fbae65428c24",
+        "sha256": "1aq9swsn4zpv20zgsy0wix4k7z5nxy53csr96wlmda070gfd8phz",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/5f814bf9cc466be415d784a9cbf0fbae65428c24.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}
