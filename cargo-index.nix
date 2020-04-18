@@ -21,7 +21,7 @@ rec {
 
      Otherwise similar to `crateConfigs`.
   */
-  crateConfigForVersion = { name, versionReq ? "*", index ? cratesIoIndex, filterYanked ? true }@args:
+  crateConfigForVersion = { name, versionReq ? "*", index ? cratesIoIndex, filterYanked ? true, ... }@args:
     let
       configs = crateConfigs args;
       versionMatcher = semver.versionMatcher versionReq;
@@ -35,20 +35,43 @@ rec {
       then firstMatch
       else null;
 
-  transitiveCrateConfigs = { name, versionReq ? "*", index ? cratesIoIndex, filterYanked ? true }@args:
-    let
-      config = crateConfigForVersion args;
-      resolveDep = { name, req, kind, ... }:
-        builtins.trace
-          "resolving ${name} ${req} ${kind} (dep of ${config.name} ${config.vers})"
-          transitiveCrateConfigs { inherit name index filterYanked; versionReq = req; };
-      blacklist = [ "core" "std" ];
-      depFilter = { name, kind, ... }: kind == "normal" && !(builtins.elem name blacklist);
-      deps = config.deps or [];
-      filteredDeps = builtins.filter depFilter deps;
-      transitiveDeps = builtins.concatMap resolveDep filteredDeps;
-    in
-      [ config ] ++ transitiveDeps;
+  /* Highly experimental - mostly to test code right now. */
+  transitiveCrateConfigs =
+    { name
+    , versionReq ? "*"
+    , index ? cratesIoIndex
+    , filterYanked ? true
+    , visited ? {}
+    }@args:
+      let
+        config = crateConfigForVersion args;
+        myKey = "${config.name}/${config.vers}";
+        visitedWithMe = visited // { "${myKey}" = config; };
+        resolveDep = visited: { name, req, kind, ... }@dep:
+          let
+            depName = dep.package or name;
+          in
+            # builtins.trace
+            # "visited ${builtins.toJSON (builtins.attrNames visited)}"
+            # builtins.trace
+            # "resolving ${depName} ${req} ${kind} (dep of ${config.name} ${config.vers})"
+            transitiveCrateConfigs {
+              inherit index filterYanked visited;
+              name = depName;
+              versionReq = req;
+            };
+        blacklist = [ "core" "std" ];
+        depFilter =
+          { name, kind, ... }@dep:
+            kind == "normal"
+            && ((dep ? target && dep.target != null) -> dep.target == pkgs.targetPlatform.config)
+            && !(builtins.elem (dep.package or name) blacklist);
+        deps = config.deps or [];
+        filteredDeps = builtins.filter depFilter deps;
+      in
+        if visited ? "${myKey}"
+        then visited
+        else lib.foldl resolveDep visitedWithMe filteredDeps;
 
   /* Returns the index sub path for the given crate name
 

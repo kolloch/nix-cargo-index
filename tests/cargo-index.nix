@@ -62,7 +62,7 @@ in
   };
   test_cratePath_three = {
     expr = cargoIndex.cratePath "abc";
-    expected = "3/abc";
+    expected = "3/a/abc";
   };
   test_cratePath_four = {
     expr = cargoIndex.cratePath "abcd";
