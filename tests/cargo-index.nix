@@ -17,6 +17,30 @@ in
       expected = "0.8.0";
     };
 
+  test_crateConfig_crate2nix_star_matches_no_prerelease =
+    let
+      match = cargoIndex.crateConfigForVersion {
+        name = "nix-base32";
+        versionReq = "*";
+      };
+    in {
+      expr = if match == null then null else match.vers;
+      # Annoyingly, we need to upate this to the latest
+      # non-prerelease version.
+      expected = "0.1.1";
+    };
+
+  test_crateConfig_no_yanked =
+    let
+      match = cargoIndex.crateConfigForVersion {
+        name = "bmp388";
+        versionReq = "=0.0.1";
+      };
+    in {
+      expr = if match == null then null else match.vers;
+      expected = null;
+    };
+
   test_crateConfig_ripgrep =
     let
       match = cargoIndex.crateConfigForVersion {

@@ -28,11 +28,16 @@ in
       "1"
       "1.23"
       "0.1"
-      "0.1.2-pre.0"
     ];
 
     expr = builtins.map (semver.versionMatcher "*") matched;
     expected = builtins.map (x: true) matched;
+  };
+
+  test_wildcard_match_no_prerelease = evalVersionTestCase {
+    req = "*";
+    version = "1.7.4-alpha.0";
+    match = false;
   };
 
   test_xrange_patch_match = evalVersionTestCase {

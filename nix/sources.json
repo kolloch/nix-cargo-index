@@ -17,10 +17,10 @@
         "homepage": "https://crates.io/",
         "owner": "rust-lang",
         "repo": "crates.io-index",
-        "rev": "c062c6ba536e6d1152e7a05d703838c9c2d91078",
-        "sha256": "18z9ggsdinfajm27a302fq8hn6grzimd73rcjcn86pzqm4d234mz",
+        "rev": "304d8d0ee03e2601979572d7c0608f02430c22b5",
+        "sha256": "0iy4r88fiha6id2jp17nbqmhasvffjqlh7a6jrj4ipxb0f5sn84m",
         "type": "tarball",
-        "url": "https://github.com/rust-lang/crates.io-index/archive/c062c6ba536e6d1152e7a05d703838c9c2d91078.tar.gz",
+        "url": "https://github.com/rust-lang/crates.io-index/archive/304d8d0ee03e2601979572d7c0608f02430c22b5.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {

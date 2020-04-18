@@ -21,11 +21,13 @@ rec {
 
      Otherwise similar to `crateConfigs`.
   */
-  crateConfigForVersion = { name, versionReq, index ? cratesIoIndex }@args:
+  crateConfigForVersion = { name, versionReq, index ? cratesIoIndex, filterYanked ? true }@args:
     let
       configs = crateConfigs args;
       versionMatcher = semver.versionMatcher versionReq;
-      matchPackage = pkg: versionMatcher pkg.vers;
+      matchPackage = pkg:
+        versionMatcher pkg.vers
+        && (filterYanked -> !(pkg.yanked or (builtins.trace "no yanked in ${builtins.toJSON pkg}" false)));
       matchingPackages = builtins.filter matchPackage configs;
       firstMatch = builtins.head matchingPackages;
     in
@@ -71,5 +73,5 @@ rec {
       config = builtins.readFile "${index}/${cratePath name}";
     in lines.lines config;
 
-  inherit lib cratesIoIndex;
+  inherit lib cratesIoIndex semver lines;
 }

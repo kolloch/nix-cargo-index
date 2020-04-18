@@ -46,7 +46,7 @@ rec {
           op.rest;
     in
       if requirement == "*"
-      then version: true
+      then internal.hasNoPrereleaseVersion
       else if xrange ? match
       then internal.xrangeMatch xrange
       else if !(op ? match)
@@ -97,11 +97,12 @@ rec {
       else
         version:
           assert builtins.isString version;
-          let
-            versionMatch = builtins.match VERSION_PREFIX version;
-            hasPrerelease = (builtins.elemAt versionMatch 4) != null;
-          in
-            lib.hasPrefix "${match}." version && !hasPrerelease;
+          lib.hasPrefix "${match}." version && hasNoPrereleaseVersion version;
+
+    hasNoPrereleaseVersion = version:
+      let
+        versionMatch = builtins.match VERSION_PREFIX version;
+      in (builtins.elemAt versionMatch 4) == null;
 
     /*
       Matches the given version `prefix` (e.g. "1.2") against the given
