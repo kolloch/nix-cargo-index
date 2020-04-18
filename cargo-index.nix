@@ -21,7 +21,7 @@ rec {
 
      Otherwise similar to `crateConfigs`.
   */
-  crateConfigForVersion = { name, versionReq, index ? cratesIoIndex, filterYanked ? true }@args:
+  crateConfigForVersion = { name, versionReq ? "*", index ? cratesIoIndex, filterYanked ? true }@args:
     let
       configs = crateConfigs args;
       versionMatcher = semver.versionMatcher versionReq;
@@ -34,6 +34,21 @@ rec {
       if matchingPackages != []
       then firstMatch
       else null;
+
+  transitiveCrateConfigs = { name, versionReq ? "*", index ? cratesIoIndex, filterYanked ? true }@args:
+    let
+      config = crateConfigForVersion args;
+      resolveDep = { name, req, kind, ... }:
+        builtins.trace
+          "resolving ${name} ${req} ${kind} (dep of ${config.name} ${config.vers})"
+          transitiveCrateConfigs { inherit name index filterYanked; versionReq = req; };
+      blacklist = [ "core" "std" ];
+      depFilter = { name, kind, ... }: kind == "normal" && !(builtins.elem name blacklist);
+      deps = config.deps or [];
+      filteredDeps = builtins.filter depFilter deps;
+      transitiveDeps = builtins.concatMap resolveDep filteredDeps;
+    in
+      [ config ] ++ transitiveDeps;
 
   /* Returns the index sub path for the given crate name
 
@@ -65,7 +80,7 @@ rec {
       else if len == 2
       then "2/${lower}"
       else if len == 3
-      then "3/${lower}"
+      then "3/${builtins.substring 0 1 lower}/${lower}"
       else "${builtins.substring 0 2 lower}/${builtins.substring 2 2 lower}/${lower}";
 
   crateConfigLines = { name, index ? cratesIoIndex, ... }:

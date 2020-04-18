@@ -52,11 +52,15 @@ rec {
       else if !(op ? match)
       then
         error
-          "unrecognized version requirement, no op found: ${requirement}"
+          "unrecognized version requirement, no op found: '${requirement}'"
           (version: false)
+      else if !(versionPrefix ? match)
+      then error
+        "unrecognized version requirement, not a version prefix: '${op.rest}'"
+        (version: false)
       else if versionPrefix.rest != ""
       then error
-        "unrecognized version requirement, string after versionPrefix: ${versionPrefix.rest}"
+        "unrecognized version requirement '${requirement}', string after versionPrefix: '${versionPrefix.rest}'"
         (version: false)
       else if op.match == "^"
       then internal.caretMatch versionPrefix.match
@@ -66,15 +70,19 @@ rec {
       then version: versionPrefix.match == version
       else if op.match == ">="
       then version: (builtins.compareVersions versionPrefix.match version) <= 0
+      else if op.match == ">"
+      then version: (builtins.compareVersions versionPrefix.match version) < 0
       else if op.match == "<="
+      then version: 0 <= (builtins.compareVersions versionPrefix.match version)
+      else if op.match == "<"
       then version: 0 < (builtins.compareVersions versionPrefix.match version)
       else error
-        "unrecognized version requirement, op.match ${op.match}: ${requirement}" (version: false);
+        "unrecognized version requirement, op.match '${op.match}': '${requirement}'" (version: false);
 
   internal = rec {
     /* Matches a unary operator in front of a version (prefix).
     */
-    VERSION_MATCH_OP = ''(\^|>=|<=|~|=)'';
+    VERSION_MATCH_OP = ''(\^|~|=|>=|<=|<|>)'';
 
     /* Matches version prefixes or full versions.
       Also matches other things but we assume well formed version requirements.
@@ -90,14 +98,16 @@ rec {
       Type: { match, rest } -> string -> bool
     */
     xrangeMatch = { match, rest }:
-      if rest != ".x"
+      if rest != ""
       then error
-        "unrecognized version requirement, string after xrange: ${builtins.substring 2 100 rest}"
+        "unrecognized version requirement, string after xrange '${match}': '${rest}'"
         (version: false)
       else
         version:
           assert builtins.isString version;
-          lib.hasPrefix "${match}." version && hasNoPrereleaseVersion version;
+          builtins.trace
+            "xrangeMatch prefix '${match}.'"
+            lib.hasPrefix "${match}." version && hasNoPrereleaseVersion version;
 
     hasNoPrereleaseVersion = version:
       let
@@ -176,7 +186,10 @@ rec {
       assert builtins.isString regex;
       assert builtins.isString string;
       let
-        match = firstMatch "${regex}.*" string;
+        matches = builtins.match "([[:blank:]]*${regex}).*" string;
+        # includes the leading blanks
+        match = if matches == null then null else builtins.head matches;
+        realMatch = builtins.elemAt matches 1;
         matchLen = builtins.stringLength match;
         len = builtins.stringLength string;
         rest = builtins.substring matchLen len string;
@@ -185,7 +198,7 @@ rec {
         then
           assert builtins.isString match;
           assert builtins.isString rest;
-          { inherit match rest; }
+          { inherit rest; match = realMatch; }
         else {};
   };
 }

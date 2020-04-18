@@ -46,6 +46,12 @@ in
     match = true;
   };
 
+  test_xrange_patch_match_with_whitespace = evalVersionTestCase {
+    req = "  1.7.x";
+    version = "1.7.4";
+    match = true;
+  };
+
   test_xrange_patch_nomatch = evalVersionTestCase {
     req = "1.7.x";
     version = "1.8.4";
@@ -72,12 +78,12 @@ in
 
   test_VERSION_XRANGE_matches1 = rec {
     expr = semver.internal.matchAndRest semver.internal.VERSION_XRANGE "1.2.x";
-    expected = { match = "1.2"; rest = ".x"; };
+    expected = { match = "1.2"; rest = ""; };
   };
 
   test_VERSION_XRANGE_matches2 = rec {
     expr = semver.internal.matchAndRest semver.internal.VERSION_XRANGE "1.x";
-    expected = { match = "1"; rest = ".x"; };
+    expected = { match = "1"; rest = ""; };
   };
 
   test_caret_match1 = evalVersionTestCase {
@@ -176,6 +182,18 @@ in
     match = false;
   };
 
+  test_equal_match = evalVersionTestCase {
+    req = "=123.435.567567";
+    version = "123.435.567567";
+    match = true;
+  };
+
+  test_equal_no_match = evalVersionTestCase {
+    req = "=123.435.567567";
+    version = "123.435.567568";
+    match = false;
+  };
+
   test_matchAndRest_up = {
     expr = semver.internal.matchAndRest semver.internal.VERSION_MATCH_OP "^1.2";
     expected = { match = "^"; rest = "1.2"; };
@@ -186,16 +204,14 @@ in
     expected = { match = "~"; rest = "1.2"; };
   };
 
-  test_VERSION_PREFIX_matches = rec {
+  test_VERSION_XRANGE_matches = rec {
     recognized = [
-      "1"
-      "1.23"
-      "0.1"
-      "0.1.2-pre.0"
+      "1.x"
+      "1.2.x"
     ];
 
-    expr = builtins.map (firstMatch semver.internal.VERSION_PREFIX) recognized;
-    expected = recognized;
+    expr = builtins.map (firstMatch semver.internal.VERSION_XRANGE) recognized;
+    expected = [ "1" "1.2" ];
   };
 
   test_VERSION_PREFIX_nomatch = rec {
