@@ -30,67 +30,125 @@ rec {
        => true
   */
   versionMatcher = requirement:
-    assert builtins.isString requirement;
     let
-      xrange =
-        internal.matchAndRest
-          internal.VERSION_XRANGE
-          requirement;
-      op =
-        internal.matchAndRest
-          internal.VERSION_MATCH_OP
-          requirement;
-      versionPrefix =
-        internal.matchAndRest
-          internal.VERSION_PREFIX
-          op.rest;
+      match = internal.versionMatcher requirement;
+      noAttrs = !(builtins.isAttrs match);
     in
-      if requirement == "*"
-      then internal.hasNoPrereleaseVersion
-      else if xrange ? match
-      then internal.xrangeMatch xrange
-      else if !(op ? match)
-      then
-        error
-          "unrecognized version requirement, no op found: '${requirement}'"
-          (version: false)
-      else if !(versionPrefix ? match)
-      then error
-        "unrecognized version requirement, not a version prefix: '${op.rest}'"
-        (version: false)
-      else if versionPrefix.rest != ""
-      then error
-        "unrecognized version requirement '${requirement}', string after versionPrefix: '${versionPrefix.rest}'"
-        (version: false)
-      else if op.match == "^"
-      then internal.caretMatch versionPrefix.match
-      else if op.match == "~"
-      then internal.tildeMatch versionPrefix.match
-      else if op.match == "="
-      then version: versionPrefix.match == version
-      else if op.match == ">="
-      then version: (builtins.compareVersions versionPrefix.match version) <= 0
-      else if op.match == ">"
-      then version: (builtins.compareVersions versionPrefix.match version) < 0
-      else if op.match == "<="
-      then version: 0 <= (builtins.compareVersions versionPrefix.match version)
-      else if op.match == "<"
-      then version: 0 < (builtins.compareVersions versionPrefix.match version)
-      else error
-        "unrecognized version requirement, op.match '${op.match}': '${requirement}'" (version: false);
+      lib.traceIf
+        noAttrs
+        "No attrs returned for '${requirement}'"
+        match.matcher;
 
-  internal = rec {
+  internal = {
+    errorMatcher = {
+      matcher = version: false;
+      rest = "";
+    };
+
+    versionMatcher = requirement:
+      let
+        firstMatch = internal.singleRequirementMatcher requirement;
+      in
+        if firstMatch.rest == ""
+        then firstMatch
+        else
+          let
+            combinatorMatch =
+              internal.matchAndRest
+                internal.REQ_COMBINE
+                firstMatch.rest;
+            rest =
+              if combinatorMatch ? rest
+              then combinatorMatch.rest
+              else firstMatch.rest;
+            restMatcher =
+              internal.versionMatcher rest;
+          in
+            {
+              matcher =
+                if !(combinatorMatch ? match) || combinatorMatch.match == ","
+                then version: firstMatch.matcher version && restMatcher.matcher version
+                else
+                  assert combinatorMatch.match == "||";
+                  version: firstMatch.matcher version || restMatcher.matcher version;
+            };
+
+    /* Returns a matcher for a "single requirement", e.g. one wild card or one
+       operator and a version prefix.
+    */
+    singleRequirementMatcher = requirement:
+      assert builtins.isString requirement;
+      let
+        wildcard =
+          internal.matchAndRest
+            internal.VERSION_WILDCARD
+            requirement;
+        xrange =
+          internal.matchAndRest
+            internal.VERSION_XRANGE
+            requirement;
+        op =
+          internal.matchAndRest
+            internal.VERSION_MATCH_OP
+            requirement;
+        versionPrefix =
+          internal.matchAndRest
+            internal.VERSION_PREFIX
+            op.rest;
+      in
+        if wildcard ? match
+        then { matcher = internal.hasNoPrereleaseVersion; rest = wildcard.rest; }
+        else if xrange ? match
+        then { matcher = internal.xrangeMatch xrange; rest = xrange.rest; }
+        else if !(op ? match)
+        then
+          error
+            "unrecognized version requirement, no op found: '${requirement}'"
+            internal.errorMatcher
+        else if !(versionPrefix ? match)
+        then error
+          "unrecognized version requirement, not a version prefix: '${op.rest}'"
+          internal.errorMatcher
+        else
+          let
+            matcher =
+              if op.match == "^"
+              then internal.caretMatch versionPrefix.match
+              else if op.match == "~"
+              then internal.tildeMatch versionPrefix.match
+              else
+                if op.match == "="
+                then version: versionPrefix.match == version
+                else if op.match == ">="
+                then version: (builtins.compareVersions versionPrefix.match version) <= 0
+                else if op.match == ">"
+                then version: (builtins.compareVersions versionPrefix.match version) < 0
+                else if op.match == "<="
+                then version: 0 <= (builtins.compareVersions versionPrefix.match version)
+                else if op.match == "<"
+                then version: 0 < (builtins.compareVersions versionPrefix.match version)
+                else error
+                  "unrecognized version requirement, op.match '${op.match}': '${requirement}'"
+                  internal.errorMatcher;
+          in { inherit matcher; inherit (versionPrefix) rest; };
+
+    VERSION_WILDCARD = ''(\*)'';
+
     /* Matches a unary operator in front of a version (prefix).
     */
     VERSION_MATCH_OP = ''(\^|~|=|>=|<=|<|>)'';
+
+    /* Matches a unary operator in front of a version (prefix).
+    */
+    REQ_COMBINE = ''(,|\|\|)'';
 
     /* Matches version prefixes or full versions.
       Also matches other things but we assume well formed version requirements.
     */
     VERSION_PREFIX = ''(([0-9]+)(\.[0-9]+)?(\.[0-9]+)?(-[-a-z.0-9_A-Z]+)?)'';
 
-    /* Matches version specs like 1.2.x or 1.x. */
-    VERSION_XRANGE = ''(([0-9]+)(\.[0-9]+)?)\.x'';
+    /* Matches version specs like `1.2.x`, `1.X` or `0.*`. */
+    VERSION_XRANGE = ''(([0-9]+)(\.[0-9]+)?)\.[xX*](\.[xX*])?'';
 
     /*
       Matches a version spec matched with VERSION_XRANGE.
@@ -105,13 +163,12 @@ rec {
       else
         version:
           assert builtins.isString version;
-          builtins.trace
-            "xrangeMatch prefix '${match}.'"
-            lib.hasPrefix "${match}." version && hasNoPrereleaseVersion version;
+          lib.hasPrefix "${match}." version
+          && internal.hasNoPrereleaseVersion version;
 
     hasNoPrereleaseVersion = version:
       let
-        versionMatch = builtins.match VERSION_PREFIX version;
+        versionMatch = builtins.match internal.VERSION_PREFIX version;
       in (builtins.elemAt versionMatch 4) == null;
 
     /*
@@ -121,7 +178,7 @@ rec {
     caretMatch = prefix: version:
       assert builtins.isString version;
       let
-        match = builtins.match VERSION_PREFIX prefix;
+        match = builtins.match internal.VERSION_PREFIX prefix;
         major = builtins.elemAt match 1;
         majorInt = lib.toInt major;
         nextMajor = builtins.toString (majorInt + 1);
@@ -145,7 +202,7 @@ rec {
     tildeMatch = prefix: version:
       assert builtins.isString version;
       let
-        match = builtins.match VERSION_PREFIX prefix;
+        match = builtins.match internal.VERSION_PREFIX prefix;
         major = builtins.elemAt match 1;
         majorInt = lib.toInt major;
         nextMajor = builtins.toString (majorInt + 1);

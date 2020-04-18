@@ -194,6 +194,62 @@ in
     match = false;
   };
 
+  # These are rare and I wish they wouldn't exist but hey.
+
+    test_multi_or1 = evalVersionTestCase {
+    req = "=1.2.1 || >= 1.2.3 <1.2.7";
+    version = "1.2.3";
+    match = true;
+  };
+
+  test_multi_or2 = evalVersionTestCase {
+    req = "=1.2.1 || >= 1.2.3 <1.2.7";
+    version = "1.2.1";
+    match = true;
+  };
+
+  test_multi_or3 = evalVersionTestCase {
+    req = "=1.2.1 || >= 1.2.3 <1.2.7";
+    version = "1.2.2";
+    match = false;
+  };
+
+  test_multi_and1 = evalVersionTestCase {
+    req = ">= 1.2.3 <1.2.7";
+    version = "1.2.3";
+    match = true;
+  };
+
+  test_multi_and1b = evalVersionTestCase {
+    req = ">= 1.2.3, <1.2.7";
+    version = "1.2.3";
+    match = true;
+  };
+
+  test_multi_and2 = evalVersionTestCase {
+    req = ">= 1.2.3 <1.2.7";
+    version = "1.2.4";
+    match = true;
+  };
+
+  test_multi_and3 = evalVersionTestCase {
+    req = ">= 1.2.3 <1.2.7";
+    version = "1.2.6";
+    match = true;
+  };
+
+  test_multi_and4 = evalVersionTestCase {
+    req = ">= 1.2.3 <1.2.7";
+    version = "1.2.2";
+    match = false;
+  };
+
+  test_multi_and5 = evalVersionTestCase {
+    req = ">= 1.2.3 <1.2.7";
+    version = "1.2.7";
+    match = false;
+  };
+
   test_matchAndRest_up = {
     expr = semver.internal.matchAndRest semver.internal.VERSION_MATCH_OP "^1.2";
     expected = { match = "^"; rest = "1.2"; };
