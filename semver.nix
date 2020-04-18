@@ -185,12 +185,15 @@ rec {
         minor = builtins.substring 1 100 (builtins.elemAt match 2);
         minorInt = lib.toInt minor;
         nextMinor = builtins.toString (minorInt + 1);
+        noPrerelease = (builtins.elemAt match 4) == null;
         versionCmp = builtins.compareVersions prefix version;
       in
         if versionCmp == 1
         then false
         else if versionCmp == 0
         then true
+        else if noPrerelease && !internal.hasNoPrereleaseVersion version
+        then false
         else if major != "0"
         then (builtins.compareVersions version nextMajor) < 0
         else (builtins.compareVersions version "0.${nextMinor}") < 0;
@@ -210,12 +213,15 @@ rec {
         minor = builtins.substring 1 100 dotMinor;
         minorInt = lib.toInt minor;
         nextMinor = builtins.toString (minorInt + 1);
+        noPrerelease = (builtins.elemAt match 4) == null;
         versionCmp = builtins.compareVersions prefix version;
       in
         if versionCmp == 1
         then false
         else if versionCmp == 0
         then true
+        else if noPrerelease && !internal.hasNoPrereleaseVersion version
+        then false
         else if dotMinor != null
         then (builtins.compareVersions version "${major}.${nextMinor}") < 0
         else (builtins.compareVersions version nextMajor) < 0;

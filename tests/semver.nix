@@ -196,7 +196,7 @@ in
 
   # These are rare and I wish they wouldn't exist but hey.
 
-    test_multi_or1 = evalVersionTestCase {
+  test_multi_or1 = evalVersionTestCase {
     req = "=1.2.1 || >= 1.2.3 <1.2.7";
     version = "1.2.3";
     match = true;

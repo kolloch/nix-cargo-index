@@ -9,12 +9,12 @@ in
   test_crateConfig_crate2nix =
     let
       match = cargoIndex.crateConfigForVersion {
-        name = "crate2nix";
-        versionReq = "^0.8";
+        name = "nix-base32";
+        versionReq = "^0.1";
       };
     in {
       expr = if match == null then null else match.vers;
-      expected = "0.8.0";
+      expected = "0.1.1";
     };
 
   test_crateConfig_crate2nix_star_matches_no_prerelease =
