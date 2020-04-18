@@ -4,9 +4,35 @@
 , lib ? pkgs.lib
 , cratesIoIndex ? sources."crates.io-index"
 , semver ? pkgs.callPackage ./semver.nix {}
+, lines ? pkgs.callPackage ./lines.nix {}
 }:
 
 rec {
+  /* Returns all uploaded crateConfigs for the crate with the given name
+     from the given checked out index.
+  */
+  crateConfigs = { name, index ? cratesIoIndex, ... }@args:
+    let
+      lines = crateConfigLines args;
+      configs = builtins.map builtins.fromJSON lines;
+    in builtins.sort (a: b: lib.versionOlder b.vers a.vers) configs;
+
+  /* Returns a config that matches the given `versionReq` or `null`.
+
+     Otherwise similar to `crateConfigs`.
+  */
+  crateConfigForVersion = { name, versionReq, index ? cratesIoIndex }@args:
+    let
+      configs = crateConfigs args;
+      versionMatcher = semver.versionMatcher versionReq;
+      matchPackage = pkg: versionMatcher pkg.vers;
+      matchingPackages = builtins.filter matchPackage configs;
+      firstMatch = builtins.head matchingPackages;
+    in
+      if matchingPackages != []
+      then firstMatch
+      else null;
+
   /* Returns the index sub path for the given crate name
 
      The corresponding cargo code looks like this:
@@ -26,7 +52,6 @@ rec {
      };
      ```
   */
-
   cratePath = name:
     let
       lower = lib.toLower name;
@@ -41,32 +66,10 @@ rec {
       then "3/${lower}"
       else "${builtins.substring 0 2 lower}/${builtins.substring 2 2 lower}/${lower}";
 
-  crateConfigLines = { name, index ? cratesIoIndex }:
+  crateConfigLines = { name, index ? cratesIoIndex, ... }:
     let
       config = builtins.readFile "${index}/${cratePath name}";
-    in lines config;
-
-  crateConfigs = { name, index ? cratesIoIndex }@args:
-    let
-      lines = crateConfigLines args;
-      configs = builtins.map builtins.fromJSON lines;
-    in builtins.sort (a: b: lib.versionOlder b.vers a.vers) configs;
-
-  firstLine = text:
-    let
-      m = builtins.match "([^\n]*\n).*" text;
-    in if m == null then null else builtins.head m;
-
-  lines = text:
-    let
-      first = firstLine text;
-      lenFirstLine = builtins.stringLength first;
-      len = builtins.stringLength text;
-      rest = assert lenFirstLine > 0; builtins.substring lenFirstLine len text;
-    in
-      if first == null
-      then []
-      else [ first ] ++ (lines rest);
+    in lines.lines config;
 
   inherit lib cratesIoIndex;
 }

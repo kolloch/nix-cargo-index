@@ -2,10 +2,22 @@
 
 # nix-cargo-index
 
-This is a nix library for using a checked out cargo index, e.g. the [crates.io
-index](https://github.com/rust-lang/crates.io-index).
+This is a pure nix library for using a checked out cargo index, e.g. the
+[crates.io index](https://github.com/rust-lang/crates.io-index). It does not use
+import-from-derivation for parsing the index.
 
-TODO: Docs, once we have something to show.
+For example, you can search for a matching ripgrep version:
+
+```
+❯ nix repl ./cargo-index.nix
+nix-repl> ripgrep = crateConfigForVersion { name = "ripgrep"; versionReq = "~12"; }
+
+nix-repl> ripgrep.vers
+"12.0.1"
+
+nix-repl> builtins.head ripgrep.deps
+{ default_features = true; features = [ ... ]; kind = "normal"; name = "bstr"; optional = false; req = "^0.2.12"; target = null; }
+```
 
 It also contains (incomplete) matching support for semver requirement strings
 such as "1.2.x" and "^0.3":

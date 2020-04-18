@@ -4,7 +4,7 @@ let
   pkgs = import nixpkgs {};
   lib = pkgs.lib;
   crate2nix = pkgs.callPackage ../default.nix {};
-  testFiles = [ "semver" ];
+  testFiles = [ "semver" "lines" "cargo-index" ];
   testsInFile = f:
     let
       tests = import (./. + "/${f}.nix");
