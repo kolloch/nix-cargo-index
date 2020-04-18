@@ -169,7 +169,7 @@ rec {
     hasNoPrereleaseVersion = version:
       let
         versionMatch = builtins.match internal.VERSION_PREFIX version;
-      in (builtins.elemAt versionMatch 4) == null;
+      in versionMatch == null || (builtins.elemAt versionMatch 4) == null;
 
     /*
       Matches the given version `prefix` (e.g. "1.2") against the given
