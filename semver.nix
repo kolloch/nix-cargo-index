@@ -2,33 +2,62 @@
 , nixpkgs ? sources.nixpkgs
 , pkgs ? import nixpkgs { config = {}; }
 , lib ? pkgs.lib
+, error ? message: replacement: builtins.throw message
 }:
 
 rec {
   /* Returns a matcher that corresponds to the given version
      requirement.
 
-     Rudimentary implementation of some of https://www.npmjs.com/package/semver.
+     Incomplete implementation of some of https://www.npmjs.com/package/semver.
 
-     Type: string -> string -> bool
+     Usage:
+       let matcher = versionMatcher requirement;
+       in matcher version; // => true or false
+
+     Type: versionMatcher :: string -> string -> bool
+
      Example:
-       versionRequirement "*" "1.2.0"
+       versionMatcher "*" "1.2.0"
        => true
-       versionRequirement "^1" "1.2.0"
+       versionMatcher "^1" "1.2.0"
        => true
-       versionRequirement "=1.2.0" "1.2.0"
+       versionMatcher "~1" "1.2.0"
+       => true
+       versionMatcher "=1.2.0" "1.2.0"
+       => true
+       versionMatcher "1.x" "1.2.3"
        => true
   */
-  versionRequirement = requirement:
+  versionMatcher = requirement:
     assert builtins.isString requirement;
     let
-      op = internal.matchAndRest VERSION_MATCH_OP requirement;
-      versionPrefix = internal.matchAndRest VERSION_PREFIX op.rest;
+      xrange =
+        internal.matchAndRest
+          internal.VERSION_XRANGE
+          requirement;
+      op =
+        internal.matchAndRest
+          internal.VERSION_MATCH_OP
+          requirement;
+      versionPrefix =
+        internal.matchAndRest
+          internal.VERSION_PREFIX
+          op.rest;
     in
       if requirement == "*"
       then version: true
+      else if xrange ? match
+      then internal.xrangeMatch xrange
       else if !(op ? match)
-      then builtins.trace "unrecognized version requirement, no op found: ${requirement}" (version: false)
+      then
+        error
+          "unrecognized version requirement, no op found: ${requirement}"
+          (version: false)
+      else if versionPrefix.rest != ""
+      then error
+        "unrecognized version requirement, string after versionPrefix: ${versionPrefix.rest}"
+        (version: false)
       else if op.match == "^"
       then internal.caretMatch versionPrefix.match
       else if op.match == "~"
@@ -39,19 +68,47 @@ rec {
       then version: (builtins.compareVersions versionPrefix.match version) <= 0
       else if op.match == "<="
       then version: 0 < (builtins.compareVersions versionPrefix.match version)
-      else builtins.trace "unrecognized version requirement, op.match ${op.match}: ${requirement}" (version: false);
-
-  /* Matches a unary operator in front of a version (prefix).
-   */
-  VERSION_MATCH_OP = ''(\^|>=|<=|~|=)'';
-
-  /* Matches version prefixes.
-     Also matches other things but we assume well formed version requirements.
-  */
-  VERSION_PREFIX = ''(([0-9]+)(\.[0-9]+)?(\.[0-9]+)?(-[-a-z.0-9_A-Z]+)?)'';
+      else error
+        "unrecognized version requirement, op.match ${op.match}: ${requirement}" (version: false);
 
   internal = rec {
+    /* Matches a unary operator in front of a version (prefix).
+    */
+    VERSION_MATCH_OP = ''(\^|>=|<=|~|=)'';
+
+    /* Matches version prefixes or full versions.
+      Also matches other things but we assume well formed version requirements.
+    */
+    VERSION_PREFIX = ''(([0-9]+)(\.[0-9]+)?(\.[0-9]+)?(-[-a-z.0-9_A-Z]+)?)'';
+
+    /* Matches version specs like 1.2.x or 1.x. */
+    VERSION_XRANGE = ''(([0-9]+)(\.[0-9]+)?)\.x'';
+
+    /*
+      Matches a version spec matched with VERSION_XRANGE.
+
+      Type: { match, rest } -> string -> bool
+    */
+    xrangeMatch = { match, rest }:
+      if rest != ".x"
+      then error
+        "unrecognized version requirement, string after xrange: ${builtins.substring 2 100 rest}"
+        (version: false)
+      else
+        version:
+          assert builtins.isString version;
+          let
+            versionMatch = builtins.match VERSION_PREFIX version;
+            hasPrerelease = (builtins.elemAt versionMatch 4) != null;
+          in
+            lib.hasPrefix "${match}." version && !hasPrerelease;
+
+    /*
+      Matches the given version `prefix` (e.g. "1.2") against the given
+      `version` (e.g. 1.2.3) with semver "^prefix" semantics.
+    */
     caretMatch = prefix: version:
+      assert builtins.isString version;
       let
         match = builtins.match VERSION_PREFIX prefix;
         major = builtins.elemAt match 1;
@@ -70,7 +127,12 @@ rec {
         then (builtins.compareVersions version nextMajor) < 0
         else (builtins.compareVersions version "0.${nextMinor}") < 0;
 
+    /*
+      Matches the given version `prefix` (e.g. "1.2") against the given
+      `version` (e.g. 1.2.3) with semver "~prefix" semantics.
+    */
     tildeMatch = prefix: version:
+      assert builtins.isString version;
       let
         match = builtins.match VERSION_PREFIX prefix;
         major = builtins.elemAt match 1;
@@ -90,6 +152,10 @@ rec {
         then (builtins.compareVersions version "${major}.${nextMinor}") < 0
         else (builtins.compareVersions version nextMajor) < 0;
 
+    /* Returns first match item returned by `builtins.match` or `null`.
+
+       Type: string -> string -> string | null
+    */
     firstMatch = regex: string:
       let
         match = builtins.match regex string;
@@ -98,6 +164,13 @@ rec {
         then builtins.head match
         else null;
 
+    /* Matches regex against a prefix of `string` and returns the match and
+       the rest of the string.
+
+       If the regex does not match, it returns an empty attrset.
+
+       Type: string -> string -> { match?, rest? }
+    */
     matchAndRest = regex: string:
       assert builtins.isString regex;
       assert builtins.isString string;
